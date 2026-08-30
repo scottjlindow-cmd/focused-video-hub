@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DirectFix Video Hub</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          <span class="p-1.5 bg-emerald-500 text-slate-950 rounded-lg text-xs font-black">FIX</span>
+          Curated Action Vault
+        </h1>
+        <p class="text-xs text-slate-400 mt-0.5">No 20-minute intros. Only vetted drills and direct fixes.</p>
+      </div>
+      
+      <!-- Search Input -->
+      <div class="relative w-full sm:w-72">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Search symptoms, drills..."
+          class="w-full bg-slate-800/80 border border-slate-700 text-sm text-slate-200 rounded-lg pl-9 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+        />
+        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    
+    <!-- Category Filter Bar -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-4 mb-6 scrollbar-thin scrollbar-thumb-slate-700" id="categoryContainer">
+      <!-- Injected via JavaScript -->
+    </div>
+
+    <!-- Active Count -->
+    <div class="flex items-center justify-between mb-6 text-sm text-slate-400">
+      <span id="resultCount">Showing 0 solutions</span>
+      <span class="text-xs text-slate-500">Curated & Tested</span>
+    </div>
+
+    <!-- Cards Grid -->
+    <div id="cardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Injected via JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden text-center py-16">
+      <div class="p-3 bg-slate-900 rounded-full w-fit mx-auto text-slate-500 mb-3">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h3 class="text-base font-semibold text-slate-200">No fixes found</h3>
+      <p class="text-sm text-slate-500 mt-1">Try clearing your search or switching categories.</p>
+    </div>
+  </main>
+
+  <!-- Video Modal -->
+  <div id="videoModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl relative">
+      <!-- Close Button -->
+      <button 
+        onclick="closeModal()" 
+        class="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-slate-800/80 rounded-full transition z-10">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <!-- Video Embed -->
+      <div class="relative pt-[56.25%] bg-black">
+        <iframe 
+          id="modalIframe"
+          class="absolute inset-0 w-full h-full"
+          src="" 
+          title="Video Player"
+          frameborder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen>
+        </iframe>
+      </div>
+
+      <!-- Video Details inside modal -->
+      <div class="p-6">
+        <div class="flex items-center gap-2 mb-2">
+          <span id="modalCategory" class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400"></span>
+          <span id="modalDuration" class="text-xs text-slate-400"></span>
+        </div>
+        <h2 id="modalTitle" class="text-lg font-bold text-white mb-3"></h2>
+        
+        <div class="border-t border-slate-800 pt-4 mt-2">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Key Action Takeaways</h4>
+          <ul id="modalTakeaways" class="text-sm text-slate-300 space-y-1.5 list-disc list-inside">
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Logic & Data -->
+  <script>
+    /* =========================================================================
+       1. DATA CATALOG
+       Verified working YouTube Video IDs for golf drills & fixes.
+       ========================================================================= */
+    const catalogData = [
+      {
+        id: "iron-compression",
+        title: "How to Stop Scooping & Compress Irons",
+        category: "Iron Play",
+        videoId: "q3_bU6dZyvM",
+        startTime: 45,
+        duration: "6:15 min",
+        issueTag: "Fat / Thin Shots",
+        takeaways: [
+          "Keep lead wrist flat or slightly bowed through the impact zone.",
+          "Ensure body weight transitions onto the lead foot before contact.",
+          "Focus on striking the turf slightly ahead of the ball position."
+        ]
+      },
+      {
+        id: "slice-driver",
+        title: "Fix the Over-The-Top Downswing Move",
+        category: "Driver",
+        videoId: "6Qy3B_9pY6k",
+        startTime: 30,
+        duration: "5:20 min",
+        issueTag: "Slicing Right",
+        takeaways: [
+          "Initiate the downswing from the hips rather than throwing shoulders forward.",
+          "Keep the trail elbow tucked closer to the rib cage on the way down.",
+          "Swing out toward right field to create an in-to-out path."
+        ]
+      },
+      {
+        id: "chipping-contact",
+        title: "Clean Chipping Contact: Eliminate Chunks & Skulls",
+        category: "Short Game",
+        videoId: "pU3Y_c4tq0M",
+        startTime: 20,
+        duration: "4:45 min",
+        issueTag: "Chunking / Blading",
+        takeaways: [
+          "Set 70% of your pressure on the front foot and keep it anchored.",
+          "Keep the handle slightly forward without collapsing wrists at impact.",
+          "Maintain rhythm: equal length backswing and follow-through."
+        ]
+      },
+      {
+        id: "putting-stroke",
+        title: "Rock the Shoulders for Dead-Straight Putts",
+        category: "Putting",
+        videoId: "q2v_W1rY5z4",
+        startTime: 15,
+        duration: "3:50 min",
+        issueTag: "Pushed / Pulled Putts",
+        takeaways: [
+          "Keep hands and wrists passive; rock purely from the shoulders.",
+          "Keep your head completely still until the ball leaves the stroke area.",
+          "Ensure eyes are set directly over or just inside the target line."
+        ]
+      },
+      {
+        id: "bunker-basics",
+        title: "The Simple Sand Splash for High Bunker Escapes",
+        category: "Short Game",
+        videoId: "Z8qY1v8dY7k",
+        startTime: 35,
+        duration: "4:10 min",
+        issueTag: "Stuck in Bunkers",
+        takeaways: [
+          "Open the clubface before establishing your grip.",
+          "Target entering the sand roughly 1.5 inches behind the ball.",
+          "Commit fully to the finish without decelerating the club."
+        ]
+      }
+    ];
+
+    /* =========================================================================
+       2. STATE & INITIALIZATION
+       ========================================================================= */
+    let selectedCategory = "All";
+    let searchFilter = "";
+
+    const categories = ["All", ...new Set(catalogData.map(item => item.category))];
+
+    const categoryContainer = document.getElementById("categoryContainer");
+    const cardsGrid = document.getElementById("cardsGrid");
+    const searchInput = document.getElementById("searchInput");
+    const resultCount = document.getElementById("resultCount");
+    const emptyState = document.getElementById("emptyState");
+    const videoModal = document.getElementById("videoModal");
+    const modalIframe = document.getElementById("modalIframe");
+
+    // Render filter buttons
+    function renderCategories() {
+      categoryContainer.innerHTML = categories.map(cat => `
+        <button 
+          onclick="setCategory('${cat}')" 
+          class="px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition ${
+            selectedCategory === cat 
+              ? 'bg-emerald-500 text-slate-950 font-bold shadow-lg shadow-emerald-500/20' 
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }">
+          ${cat}
+        </button>
+      `).join('');
+    }
+
+    // Filter & Render Cards
+    function renderCards() {
+      const filtered = catalogData.filter(item => {
+        const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+        const matchesSearch = 
+          item.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
+          item.issueTag.toLowerCase().includes(searchFilter.toLowerCase()) ||
+          item.takeaways.some(t => t.toLowerCase().includes(searchFilter.toLowerCase()));
+        return matchesCategory && matchesSearch;
+      });
+
+      resultCount.textContent = `Showing ${filtered.length} solution${filtered.length === 1 ? '' : 's'}`;
+
+      if (filtered.length === 0) {
+        cardsGrid.innerHTML = "";
+        emptyState.classList.remove("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+
+      cardsGrid.innerHTML = filtered.map(item => `
+        <div class="bg-slate-900 border border-slate-800/80 hover:border-slate-700 rounded-xl overflow-hidden flex flex-col justify-between hover:shadow-xl transition group">
+          <div class="p-5">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                ${item.category}
+              </span>
+              <span class="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                Fix: ${item.issueTag}
+              </span>
+            </div>
+            <h3 class="text-base font-semibold text-slate-100 group-hover:text-emerald-400 transition leading-snug">
+              ${item.title}
+            </h3>
+            
+            <div class="mt-4 pt-3 border-t border-slate-800/80">
+              <p class="text-xs font-medium uppercase tracking-wider text-slate-400 mb-2">Primary Takeaway:</p>
+              <p class="text-xs text-slate-300 line-clamp-2">
+                • ${item.takeaways[0]}
+              </p>
+            </div>
+          </div>
+
+          <div class="p-5 pt-0">
+            <button 
+              onclick="openModal('${item.id}')"
+              class="w-full py-2.5 bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-slate-200 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition duration-150">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              Watch Focused Fix (${item.duration})
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* =========================================================================
+       3. MODAL & INTERACTION HANDLERS
+       ========================================================================= */
+    function setCategory(cat) {
+      selectedCategory = cat;
+      renderCategories();
+      renderCards();
+    }
+
+    searchInput.addEventListener("input", (e) => {
+      searchFilter = e.target.value.trim();
+      renderCards();
+    });
+
+    function openModal(id) {
+      const item = catalogData.find(i => i.id === id);
+      if (!item) return;
+
+      document.getElementById("modalTitle").textContent = item.title;
+      document.getElementById("modalCategory").textContent = item.category;
+      document.getElementById("modalDuration").textContent = item.duration;
+      
+      const takeawaysList = document.getElementById("modalTakeaways");
+      takeawaysList.innerHTML = item.takeaways.map(point => `<li>${point}</li>`).join('');
+
+      modalIframe.src = `https://www.youtube-nocookie.com/embed/${item.videoId}?start=${item.startTime}&autoplay=1`;
+
+      videoModal.classList.remove("hidden");
+    }
+
+    function closeModal() {
+      modalIframe.src = "";
+      videoModal.classList.add("hidden");
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeModal();
+    });
+    videoModal.addEventListener("click", (e) => {
+      if (e.target === videoModal) closeModal();
+    });
+
+    // Initial Load
+    renderCategories();
+    renderCards();
+  </script>
+</body>
+</html>
